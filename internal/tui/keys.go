@@ -15,7 +15,7 @@ type keyMap struct {
 // Send lists ctrl+enter. Update also accepts ctrl+s because macOS often swallows ctrl+enter.
 func newKeyMap() keyMap {
 	return keyMap{
-		Send:    key.NewBinding(key.WithKeys("ctrl+enter"), key.WithHelp("ctrl+enter", "send")),
+		Send:    key.NewBinding(key.WithKeys("ctrl+enter", "ctrl+s"), key.WithHelp("ctrl+enter", "send")),
 		Quit:    key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("ctrl+c", "quit")),
 		NextTab: key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "next tab")),
 		PrevTab: key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "prev tab")),

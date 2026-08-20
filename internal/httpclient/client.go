@@ -13,6 +13,8 @@ import (
 
 const maxBodyBytes = 8 << 20 // 8MiB
 
+// Response is what Probe shows after Send.
+// Body is a string capped at 8MiB. Headers are the transport's http.Header.
 type Response struct {
 	StatusCode int
 	Status     string
@@ -25,6 +27,8 @@ type Client struct {
 	client *http.Client
 }
 
+// New returns an HTTP client with a 30s timeout.
+// Every Send shares this client; do not put Bubble Tea types on Client.
 func New() *Client {
 	return &Client{
 		client: &http.Client{
@@ -33,6 +37,9 @@ func New() *Client {
 	}
 }
 
+// Send performs one HTTP request using ctx for cancel and deadline.
+// HEAD never sends Body. Response bodies larger than 8MiB return
+// "response body exceeds 8MiB". The TUI must call this from a tea.Cmd, not go func().
 func (c *Client) Send(ctx context.Context, req request.Request) (Response, error) {
 	start := time.Now()
 

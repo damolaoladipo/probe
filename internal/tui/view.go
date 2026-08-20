@@ -24,24 +24,38 @@ func formatHeaders(h map[string][]string) string {
 // View draws the method, URL, editors, status, and response.
 // It must not print with fmt.Println; the string returned here is the whole screen.
 func (m Model) View() string {
+	
 	header := fmt.Sprintf("%-7s %s", m.method, m.urlInput.View())
-	s := fmt.Sprintf("Probe\n\n%s\n\nHeaders\n%s\n\nBody\n%s\n\nQuery\n%s\n\n",
-		header, m.headers.View(), m.body.View(), m.query.View())
 	if m.loading {
-		s += "Sending...\n"
+		header += "  " + m.spinner.View()
 	}
-	if m.err != nil {
-		s += fmt.Sprintf("Error: %v\n", m.err)
+	
+	body := ""
+	switch m.tab {
+	case tabRequest:
+		body = header
+	case tabHeaders:
+		body = m.headers.View()
+	case tabBody:
+		body = m.body.View()
+	case tabQuery:
+		body = m.query.View()
+	case tabResponse:
+		if m.err != nil {
+			body = fmt.Sprintf("Error: %v", m.err)
+		} else if m.response != nil {
+			status := m.styles.statusColor(m.response.StatusCode).Render(m.response.Status)
+			body = fmt.Sprintf("%s  %s\n\nHeaders\n%s\nBody\n%s",
+				status, m.response.Duration, formatHeaders(m.response.Headers), m.viewport.View())
+		} else {
+			body = "No response yet. ctrl+enter to send."
+		}
 	}
-	if m.response != nil {
-		s += fmt.Sprintf(
-			"Response\n\n%s\n%v\n\nHeaders\n%s\nBody\n%s\n",
-			m.response.Status,
-			m.response.Duration,
-			formatHeaders(m.response.Headers),
-			m.response.Body,
-		)
+	
+	s := fmt.Sprintf("Probe\n%s\n%s\n%s", m.renderTabs(), body, m.help.View(m.keys))
+	if m.width > 0 {
+		return m.styles.frame.Width(m.width).Render(s)
 	}
-	s += "\ntab focus   m method (URL)   ctrl+enter send   Ctrl+C quit\n"
+	
 	return s
 }

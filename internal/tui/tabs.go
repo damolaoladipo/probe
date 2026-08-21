@@ -30,7 +30,7 @@ func (m Model) renderTabs() string {
 		}
 	}
 	row := lipgloss.JoinHorizontal(lipgloss.Top, parts...)
-	line := strings.Repeat("─", max(0, m.width-lipgloss.Width(row)-4))
+	line := strings.Repeat("─", max(0, m.paneW-lipgloss.Width(row)))
 	return row + line
 }
 

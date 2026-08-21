@@ -64,7 +64,9 @@ func (m Model) View() string {
 		}
 	}
 
-	s := fmt.Sprintf("Probe\n\n%s\n%s\n%s\n%s", m.renderTabs(), body, m.statusMsg, m.help.View(m.keys))
+	main := fmt.Sprintf("%s\n\n%s", m.renderTabs(), body)
+	row := lipgloss.JoinHorizontal(lipgloss.Top, m.renderSidebar(), "  ", main)
+	s := fmt.Sprintf("Probe\n\n%s\n%s\n%s", row, m.statusMsg, m.help.View(m.keys))
 	if m.width > 0 {
 		return m.styles.frame.Width(m.width).Render(s)
 	}

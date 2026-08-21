@@ -23,8 +23,10 @@ const (
 )
 
 // Model is the Bubble Tea workbench: editors, inspect pane, and in-flight HTTP.
+// statusMsg is the last save/load line drawn above the help bar.
 type Model struct {
 	width, height int
+	paneW, paneH  int
 	tab           int
 	method        string
 	focus         int
@@ -41,6 +43,7 @@ type Model struct {
 	loading       bool
 	response      *httpclient.Response
 	err           error
+	statusMsg     string
 	cancel        context.CancelFunc
 }
 
@@ -58,7 +61,7 @@ func NewModel() Model {
 	headers := textarea.New()
 	headers.Placeholder = "Content-Type: application/json"
 	headers.SetWidth(60)
-	headers.SetHeight(8)
+	headers.SetHeight(12)
 	headers.SetValue("Content-Type: application/json")
 	headers.Blur()
 
@@ -72,14 +75,14 @@ func NewModel() Model {
 	body := textarea.New()
 	body.Placeholder = `{"name":"Damola"}`
 	body.SetWidth(60)
-	body.SetHeight(10)
+	body.SetHeight(12)
 	body.Blur()
 
 	// Create the query textarea
 	query := textarea.New()
 	query.Placeholder = "page=2"
 	query.SetWidth(60)
-	query.SetHeight(6)
+	query.SetHeight(12)
 	query.Blur()
 
 	// Create the sending spinner
@@ -160,6 +163,7 @@ func (m Model) startSend() (Model, tea.Cmd) {
 	m.cancel = cancel
 	m.loading = true
 	m.err = nil
+	m.statusMsg = ""
 	m.response = nil
 
 	// Send on a tea.Cmd so the TUI stays responsive.
@@ -172,7 +176,7 @@ func (m Model) startSend() (Model, tea.Cmd) {
 }
 
 func (m Model) cancelInFlight() (Model, tea.Cmd) {
-	
+
 	if m.loading && m.cancel != nil {
 		m.cancel()
 		m.cancel = nil
@@ -183,13 +187,20 @@ func (m Model) cancelInFlight() (Model, tea.Cmd) {
 }
 
 func (m *Model) applySize() {
+	// One pane size for every tab so switching Request/Headers/Body/Query/Response does not jump.
 	inner := max(20, m.width-4)
+	paneH := max(8, m.height-10)
+	m.paneW = inner
+	m.paneH = paneH
 	m.urlInput.Width = max(10, inner-10)
 	m.headers.SetWidth(inner)
 	m.body.SetWidth(inner)
 	m.query.SetWidth(inner)
+	m.headers.SetHeight(paneH)
+	m.body.SetHeight(paneH)
+	m.query.SetHeight(paneH)
 	m.viewport.Width = inner
-	m.viewport.Height = max(5, m.height-12)
+	m.viewport.Height = paneH
 }
 
 func (m Model) setTab(tab int) (Model, tea.Cmd) {

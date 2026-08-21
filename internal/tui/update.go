@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -9,7 +11,8 @@ import (
 // Update is the Bubble Tea event loop.
 // Window size resizes the textareas. Keys that belong to the app (quit, send, tab, m)
 // are handled here. Everything else is forwarded to the focused editor so Enter
-// can be a newline in Headers/Body/Query. Send is ctrl+enter; ctrl+s is the Mac fallback.
+// can be a newline in Headers/Body/Query. Send is ctrl+enter; ctrl+p is the Mac fallback.
+// ctrl+s saves request.yaml. ctrl+o loads it.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
@@ -37,7 +40,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		resp := msg.response
 		m.response = &resp
-		m.viewport.SetContent(prettyJSON(resp.Body))
+		status := m.styles.statusColor(resp.StatusCode).Render(resp.Status)
+		m.viewport.SetContent(fmt.Sprintf("%s  %s\n\nHeaders\n%s\nBody\n%s",
+			status, resp.Duration, formatHeaders(resp.Headers), prettyJSON(resp.Body)))
 		m.viewport.GotoTop()
 		return m.setTab(tabResponse)
 
@@ -47,6 +52,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Send):
 			return m.startSend()
+		case key.Matches(msg, m.keys.Save):
+			return m.saveRequest()
+		case key.Matches(msg, m.keys.Open):
+			return m.loadRequest()
 		case key.Matches(msg, m.keys.Cancel):
 			return m.cancelInFlight()
 		case key.Matches(msg, m.keys.NextTab):
@@ -84,4 +93,3 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	return m, tea.Batch(cmds...)
 }
-

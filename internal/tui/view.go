@@ -3,6 +3,8 @@ package tui
 import (
 	"fmt"
 	"strings"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 // formatHeaders turns response headers into one "Name: value" line each.
@@ -21,19 +23,31 @@ func formatHeaders(h map[string][]string) string {
 	return b.String()
 }
 
+// pane pads a tab's content to the same width and height as the textareas and viewport.
+func (m Model) pane(s string) string {
+	w, h := m.paneW, m.paneH
+	if w <= 0 {
+		w = 60
+	}
+	if h <= 0 {
+		h = 12
+	}
+	return lipgloss.NewStyle().Width(w).Height(h).MaxHeight(h).Render(s)
+}
+
 // View draws the method, URL, editors, status, and response.
 // It must not print with fmt.Println; the string returned here is the whole screen.
 func (m Model) View() string {
-	
+
 	header := fmt.Sprintf("%-7s %s", m.method, m.urlInput.View())
 	if m.loading {
 		header += "  " + m.spinner.View()
 	}
-	
+
 	body := ""
 	switch m.tab {
 	case tabRequest:
-		body = header
+		body = m.pane(header)
 	case tabHeaders:
 		body = m.headers.View()
 	case tabBody:
@@ -42,20 +56,18 @@ func (m Model) View() string {
 		body = m.query.View()
 	case tabResponse:
 		if m.err != nil {
-			body = fmt.Sprintf("Error: %v", m.err)
+			body = m.pane(fmt.Sprintf("Error: %v", m.err))
 		} else if m.response != nil {
-			status := m.styles.statusColor(m.response.StatusCode).Render(m.response.Status)
-			body = fmt.Sprintf("%s  %s\n\nHeaders\n%s\nBody\n%s",
-				status, m.response.Duration, formatHeaders(m.response.Headers), m.viewport.View())
+			body = m.viewport.View()
 		} else {
-			body = "No response yet. ctrl+enter to send."
+			body = m.pane("No response yet. ctrl+enter to send.")
 		}
 	}
-	
-	s := fmt.Sprintf("Probe\n%s\n%s\n%s", m.renderTabs(), body, m.help.View(m.keys))
+
+	s := fmt.Sprintf("Probe\n\n%s\n%s\n%s\n%s", m.renderTabs(), body, m.statusMsg, m.help.View(m.keys))
 	if m.width > 0 {
 		return m.styles.frame.Width(m.width).Render(s)
 	}
-	
+
 	return s
 }

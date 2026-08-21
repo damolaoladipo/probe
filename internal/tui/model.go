@@ -22,7 +22,7 @@ const (
 	focusQuery
 )
 
-// Model is the Bubble Tea workbench: editors, inspect pane, and in-flight HTTP.
+// Model is the Bubble Tea workbench: request list, editors, inspect pane, and in-flight HTTP.
 // statusMsg is the last save/load line drawn above the help bar.
 type Model struct {
 	width, height int
@@ -45,6 +45,9 @@ type Model struct {
 	err           error
 	statusMsg     string
 	cancel        context.CancelFunc
+	requests      []namedRequest
+	sel           int
+	sidebar       bool
 }
 
 type responseMsg struct {
@@ -105,6 +108,7 @@ func NewModel() Model {
 		client:   httpclient.New(),
 		method:   "GET",
 		tab:      tabRequest,
+		requests: []namedRequest{{Name: "Untitled", Req: blankRequest()}},
 	}
 
 	return m
@@ -188,7 +192,7 @@ func (m Model) cancelInFlight() (Model, tea.Cmd) {
 
 func (m *Model) applySize() {
 	// One pane size for every tab so switching Request/Headers/Body/Query/Response does not jump.
-	inner := max(20, m.width-4)
+	inner := max(20, m.width-4-sidebarWidth-2)
 	paneH := max(8, m.height-10)
 	m.paneW = inner
 	m.paneH = paneH

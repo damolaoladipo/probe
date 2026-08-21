@@ -12,7 +12,7 @@ import (
 // Window size resizes the textareas. Keys that belong to the app (quit, send, tab, m)
 // are handled here. Everything else is forwarded to the focused editor so Enter
 // can be a newline in Headers/Body/Query. Send is ctrl+enter; ctrl+p is the Mac fallback.
-// ctrl+s saves request.yaml. ctrl+o loads it.
+// ctrl+s saves request.yaml. ctrl+o loads it. ctrl+n adds a request. ctrl+b focuses the sidebar.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
@@ -53,17 +53,50 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Send):
 			return m.startSend()
 		case key.Matches(msg, m.keys.Save):
+			m = m.stashCurrent()
 			return m.saveRequest()
 		case key.Matches(msg, m.keys.Open):
-			return m.loadRequest()
+			loaded, cmd := m.loadRequest()
+			loaded = loaded.stashCurrent()
+			return loaded, cmd
+		case key.Matches(msg, m.keys.New):
+			return m.newRequest(), nil
+		case key.Matches(msg, m.keys.Sidebar):
+			m.sidebar = !m.sidebar
+			if m.sidebar {
+				m.urlInput.Blur()
+				m.headers.Blur()
+				m.body.Blur()
+				m.query.Blur()
+				return m, nil
+			}
+			return m.setTab(m.tab)
 		case key.Matches(msg, m.keys.Cancel):
 			return m.cancelInFlight()
 		case key.Matches(msg, m.keys.NextTab):
+			m.sidebar = false
 			return m.setTab(nextTab(m.tab))
 		case key.Matches(msg, m.keys.PrevTab):
+			m.sidebar = false
 			return m.setTab(prevTab(m.tab))
-		case key.Matches(msg, m.keys.Method) && m.tab == tabRequest:
+		case key.Matches(msg, m.keys.Method) && m.tab == tabRequest && !m.sidebar:
 			m.method = nextMethod(m.method)
+			return m, nil
+		}
+		if m.sidebar {
+			switch msg.String() {
+			case "j", "down":
+				return m.selectRequest(m.sel + 1), nil
+			case "k", "up":
+				return m.selectRequest(m.sel - 1), nil
+			case "n":
+				return m.newRequest(), nil
+			case "d", "x":
+				return m.deleteRequest(), nil
+			case "enter":
+				m.sidebar = false
+				return m.setTab(tabRequest)
+			}
 			return m, nil
 		}
 	}
